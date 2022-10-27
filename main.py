@@ -128,7 +128,6 @@ plt.xlabel('Portfolio Volatility')
 plt.ylabel('Portfolio Return')
 plt.colorbar(label='Sharpe Ratio')
 plt.title('Efficient Frontier of Portfolios')
-plt.show()
 
 
 # If short selling is available:
