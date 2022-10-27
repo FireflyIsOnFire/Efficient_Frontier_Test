@@ -18,7 +18,7 @@ pd.set_option('display.max_columns',None)
 begin = date(2020,1,1)
 end = date.today()
 interval = (end-begin).days
-#print(interval)
+risk_free_rate = 0.04/365*interval
 
 tickers = ['BTC-USD','ETH-USD','USDT-USD','ADA-USD','XRP-USD','SOL-USD','DOGE-USD','DOT-USD','DAI-USD','MATIC-USD']
 df = pd.DataFrame()
@@ -29,55 +29,18 @@ for i in tickers:
 data = np.log(df/df.shift(1))
 df_dc = df/df.shift(1)-1
 data.to_csv('Database.csv')
-
-
-
-
-#Weird bug, I cant set end data except today(), have to collect all data then get the slice
-'''
-for i in tickers:
-    df1[i] = web.DataReader(i,'yahoo',stress_begin, stress_end)['Adj Close']
-stressed_data = df/df.shift(1)-1
-stressed_data.to_csv('StressedData')
-
-print(stress_interval)
-print(stressed_data.head(stress_interval))
-
-'''
-#print(df_dc)
-#print(df_r,'\n',data)
-
-
-
 data_corr = data.corr()
-#print(data_corr)
-
-# correlation heatmap
-sns.heatmap(data_corr, annot=True ,cmap='RdBu_r', vmin=-1, vmax=1)
-#plt.show()
-
-
-
 
 risk_free_rate = 0.04/365*interval
-
 
 #main code
 
 data = pd.read_csv('Database.csv')
 returns_annual = data.mean(numeric_only=True)*interval #calculate mean return
 cov_annual = data.cov()*interval #covariance matrix
-#print(cov_annual)
-
-#print(returns_annual,'\n',cov_annual)
-
 number_of_assets = len(data.columns)-1
-#print(number_of_assets)
 
 
-portfolio_returns = []
-portfolio_volatility = []
-sharpe_ratio = []
 weight = []
 optimal_search = []
 here_to_find_ratio = []
@@ -119,6 +82,7 @@ optimal_search = optimal_search.sort_values(by = ['vola'])
 
 
 #print(plt.style.available)
+sns.heatmap(data_corr, annot=True ,cmap='RdBu_r', vmin=-1, vmax=1)
 plt.style.use('bmh')
 plt.figure(figsize=(8, 4))
 plt.scatter(total_data['volatilities'], total_data['returns'], c=total_data['SPI'],cmap='RdYlGn', edgecolors='black',marker='.')
@@ -128,6 +92,7 @@ plt.xlabel('Portfolio Volatility')
 plt.ylabel('Portfolio Return')
 plt.colorbar(label='Sharpe Ratio')
 plt.title('Efficient Frontier of Portfolios')
+
 
 
 # If short selling is available:
@@ -147,6 +112,7 @@ bnds = tuple((-1, 1) for x in range(number_of_assets))
 x0 = np.array([0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
 cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
 opts = opt.minimize(func, x0, method='SLSQP', bounds=bnds, constraints=cons)
+print(opts,'\n')
 print('Assets: ',tickers,'\n','Weights: ',(opts.x).round(3),'\n','returns:  Volatilities:  SPI: ','\n', record(opts['x']),'\n'*2)
 
 
@@ -157,22 +123,14 @@ print('Assets: ',tickers,'\n','Weights: ',(opts.x).round(3),'\n','returns:  Vola
 # Rsik modeling
 opt_weight = opts['x'].round(3)
 port_daily_change = opt_weight*df_dc
-#print(port_daily_change)
-#print(len(port_daily_change.columns))
-
-
 
 port_daily_change.insert(len(port_daily_change.columns),'Portfolio',0)
-#print(port_daily_change)
-
 port_daily_change['Portfolio'] = port_daily_change.apply(lambda x:x.sum(),axis=1)
 port_daily_change.to_csv('Portfolio')
-#print(port_daily_change)
+
 
 #Bootstrapping database
 bootstrapping_data = port_daily_change['Portfolio']
-#print(bootstrapping_data)
-
 
 
 sorted_data = np.array(bootstrapping_data)
@@ -218,9 +176,6 @@ def Historical_Risk_95p(daily_change):
         summary = daily_change[i].astype(np.float) + summary
     summary=summary/length
     return summary
-
-
-
 
 
 
