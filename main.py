@@ -1,11 +1,8 @@
 import pandas as pd
 import numpy as np
 import pandas_datareader.data as web
-import datetime
 from datetime import date
-import numpy.random as npr
 import matplotlib.pyplot as plt
-from pylab import mpl
 import scipy.optimize as opt
 from scipy import stats
 import seaborn as sns
@@ -31,7 +28,6 @@ df_dc = df/df.shift(1)-1
 data.to_csv('Database.csv')
 data_corr = data.corr()
 
-risk_free_rate = 0.04/365*interval
 
 #main code
 
