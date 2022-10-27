@@ -6,7 +6,7 @@ from datetime import date
 import numpy.random as npr
 import matplotlib.pyplot as plt
 from pylab import mpl
-import scipy.optimize as sco
+import scipy.optimize as opt
 from scipy import stats
 import seaborn as sns
 import math
@@ -146,7 +146,7 @@ def func(weights):
 bnds = tuple((-1, 1) for x in range(number_of_assets))
 x0 = np.array([0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
 cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
-opts = sco.minimize(func, x0, method='SLSQP', bounds=bnds, constraints=cons)
+opts = opt.minimize(func, x0, method='SLSQP', bounds=bnds, constraints=cons)
 print('Assets: ',tickers,'\n','Weights: ',(opts.x).round(3),'\n','returns:  Volatilities:  SPI: ','\n', record(opts['x']),'\n'*2)
 
 
