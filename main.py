@@ -7,6 +7,7 @@ import scipy.optimize as opt
 from scipy import stats
 import seaborn as sns
 import math
+from RiskMeasure import *
 
 plt.rcParams['font.family'] = 'Arial'
 plt.rcParams['axes.unicode_minus']=False
@@ -77,19 +78,6 @@ optimal_search = optimal_search.sort_values(by = ['vola'])
 #print(optimal_search)
 
 
-#print(plt.style.available)
-sns.heatmap(data_corr, annot=True ,cmap='RdBu_r', vmin=-1, vmax=1)
-plt.style.use('bmh')
-plt.figure(figsize=(8, 4))
-plt.scatter(total_data['volatilities'], total_data['returns'], c=total_data['SPI'],cmap='RdYlGn', edgecolors='black',marker='.')
-#plt.plot(optimal_search['vola'],optimal_search['re'])
-plt.grid(True)
-plt.xlabel('Portfolio Volatility')
-plt.ylabel('Portfolio Return')
-plt.colorbar(label='Sharpe Ratio')
-plt.title('Efficient Frontier of Portfolios')
-
-
 
 # If short selling is available:
 
@@ -104,6 +92,7 @@ def record(weights):
 def func(weights):
     return -record(weights)[2]
 
+#here shortselling is allowed, therefore the assigned weight could be negative
 bnds = tuple((-1, 1) for x in range(number_of_assets))
 x0 = np.array([0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
 cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
@@ -111,7 +100,9 @@ opts = opt.minimize(func, x0, method='SLSQP', bounds=bnds, constraints=cons)
 print(opts,'\n')
 print('Assets: ',tickers,'\n','Weights: ',(opts.x).round(3),'\n','returns:  Volatilities:  SPI: ','\n', record(opts['x']),'\n'*2)
 
-
+#global optimizition: this function didn't need constraints and bounds.
+opts_g = opt.basinhopping(func, x0, niter = 100)
+#print('*'*50,'\n',opts_g)
 
 
 
@@ -127,70 +118,41 @@ port_daily_change.to_csv('Portfolio')
 
 #Bootstrapping database
 bootstrapping_data = port_daily_change['Portfolio']
-
-
 sorted_data = np.array(bootstrapping_data)
 
 
-def VaR_95p_parameter(daily_change,days): #problem is: it's not log-return.
-    # days: horizon of VaR
-    mu = daily_change.mean()
-    std = daily_change.std()
-    VaR = mu*days-1.645*std*np.sqrt(days)
-    #print(mu,'\n',std)
-    n_test_result = stats.kstest(sorted_data, 'norm', (mu, std))  # not normal distribution cuz p<0.5
-    print(n_test_result,'\n','if p-value<0.05, this model isnt normal distribution! VaR-parameter unsuitable!')
-    return VaR
-
-
-def VaR_MCS(daily_change,days):
-    # days: horizon of VaR
-    mu = daily_change.mean()
-    std = daily_change.std()
-    price_changes=[]
-    n_test_result = stats.kstest(sorted_data, 'norm', (mu, std))  # not normal distribution cuz p<0.5
-    print(n_test_result,'\n','if p-value<0.05, this model is not a normal distribution! VaR-parameter unsuitable!')
-    for i in range(1000):
-        dis = np.random.normal(loc=mu,scale=std,size=None)
-        price_changes.append(dis)
-    price_changes=np.array(price_changes)
-    VaR = price_changes.mean()*days - 1.645*price_changes.std()*np.sqrt(days)
-    return VaR
-
-def Expected_Shortfall_95p(daily_change,days):
-    mu = daily_change.mean()
-    std = daily_change.std()
-    ES = -(mu*days + np.sqrt(days)*std*(math.e**(-(1.645**2)/2)/((1-0.95)*np.sqrt(2*3.1415926))))
-    return ES
-
-def Historical_Risk_95p(daily_change):
-    length = round(len(daily_change)*0.05)
-    daily_change=daily_change[np.argsort(daily_change)]
-    #print(daily_change)
-    summary = 0
-    for i in range(length):
-        summary = daily_change[i].astype(np.float) + summary
-    summary=summary/length
-    return summary
-
-
-
+risks = RiskMeasure(sorted_data,1)
 
 # exam risk factors
-a = VaR_MCS(sorted_data,1)
-b = VaR_95p_parameter(sorted_data,1)
-c = Expected_Shortfall_95p(sorted_data,1)
-d = Historical_Risk_95p(sorted_data)
+a = risks.VaR_MCS()
+b = risks.VaR_95p_parameter()
+c = risks.Expected_Shortfall_95p()
+d = risks.Historical_Risk_95p()
 print('VaR with Monte-Carlo-Simulation: ',a,'\n','VaR with parameter: ',b,'\n','Expected Shortfall: ',c,'\n','Historical maximal loss: ',d)
 
+
+#print(plt.style.available)
+plt.figure(figsize=(8, 4))
+plt.style.use('bmh')
+plt.figure(1)
+plt.grid(True)
+heatmap = plt.subplot(221)
+heatmap = sns.heatmap(data_corr, annot=True ,cmap='RdBu_r', vmin=-1, vmax=1)
+plt2 = plt.subplot(212)
+plt2 = plt.scatter(total_data['volatilities'], total_data['returns'], c=total_data['SPI'],cmap='RdYlGn', edgecolors='black',marker='.')
+#plt.plot(optimal_search['vola'],optimal_search['re'])
+plt.xlabel('Portfolio Volatility')
+plt.ylabel('Portfolio Return')
+plt.colorbar(label='Sharpe Ratio')
+#plt.title('Efficient Frontier of Portfolios')
+
 #plot dist
-plt.rcParams['figure.figsize']=(9,7)
-f = plt.figure()
-plt.hist(bootstrapping_data,bins=50, alpha=0.6, color='steelblue')
+plt3 = plt.subplot(222)
+plt3 = plt.hist(bootstrapping_data,bins=50, alpha=0.6, color='steelblue')
 plt.ylabel("frequence", fontsize=11)
 plt.xticks(fontsize=11)
 plt.yticks(fontsize=11)
-plt.title("Changes distribution & VaR/ES", fontsize=16)
+#plt.title("Changes distribution & VaR/ES", fontsize=16)
 plt.axvline(a,color='r',label='VaR with MCS')
 plt.axvline(b,color='b',label='VaR with parameter')
 plt.axvline(c,color='y',label='Expected Shortfall')
