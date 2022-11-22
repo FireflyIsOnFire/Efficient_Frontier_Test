@@ -4,9 +4,7 @@ import pandas_datareader.data as web
 from datetime import date
 import matplotlib.pyplot as plt
 import scipy.optimize as opt
-from scipy import stats
 import seaborn as sns
-import math
 from RiskMeasure import *
 
 plt.rcParams['font.family'] = 'Arial'
@@ -41,7 +39,7 @@ number_of_assets = len(data.columns)-1
 weight = []
 optimal_search = []
 here_to_find_ratio = []
-for stock in range(1000000): #MCS
+for stock in range(10000): #MCS
     next_i = False
     while True:
         weight = np.random.random(number_of_assets)
@@ -56,11 +54,36 @@ for stock in range(1000000): #MCS
                 break
         if next_i:
             break
-        here_to_find_ratio.append([returns, volatility, sharpe, weight])
+        here_to_find_ratio.append([[returns], [volatility], [sharpe], [weight]])
         optimal_search.append([returns,volatility])
         #weight.append(weight)
+here_to_find_ratio = pd.DataFrame(here_to_find_ratio, columns = ['return','volatility','SPI','weights'])
+print(here_to_find_ratio)
 
-#print(optimal_search)
+po_annotation = []
+
+for i in range(len(here_to_find_ratio)):
+    point_x = here_to_find_ratio.iloc[i,1]
+    point_y = here_to_find_ratio.iloc[i,0]
+    point, = plt.plot(point_x,point_y, marker = '.', c = 'darkgreen')
+    annotation = plt.annotate(here_to_find_ratio.iloc[i,3], xy = (point_x,point_y), size = 15)
+    annotation.set_visible(False)
+    po_annotation.append([point, annotation])
+
+def on_move(event):
+    visibility_change = False
+    for point, annotation in po_annotation:
+        should_be_visible = (point.contains(event)[0] == True)
+        if should_be_visible != annotation.get_visible():
+            visibility_change = True
+            annotation.set_visible(should_be_visible)
+    if visibility_change:
+        plt.draw()
+#on_move_id = fig.canvas.mpl
+plt.show()
+
+
+'''#print(optimal_search)
 optimal_search = pd.DataFrame(optimal_search)
 #print(optimal_search)
 optimal_search.columns = ['re','vola']
@@ -93,7 +116,7 @@ def func(weights):
     return -record(weights)[2]
 
 #here shortselling is allowed, therefore the assigned weight could be negative
-bnds = tuple((-1, 1) for x in range(number_of_assets))
+bnds = tuple((0, 1) for x in range(number_of_assets))
 x0 = np.array([0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1])
 cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
 opts = opt.minimize(func, x0, method='SLSQP', bounds=bnds, constraints=cons)
@@ -158,6 +181,6 @@ plt.axvline(b,color='b',label='VaR with parameter')
 plt.axvline(c,color='y',label='Expected Shortfall')
 plt.axvline(d,color='g',label='Historical max. loss')
 plt.legend()
-plt.show()
-
+#plt.show()
+'''
 
