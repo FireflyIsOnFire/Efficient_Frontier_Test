@@ -39,7 +39,7 @@ number_of_assets = len(data.columns)-1
 weight = []
 optimal_search = []
 here_to_find_ratio = []
-for stock in range(10000): #MCS
+for stock in range(1000000): #MCS
     next_i = False
     while True:
         weight = np.random.random(number_of_assets)
@@ -54,19 +54,21 @@ for stock in range(10000): #MCS
                 break
         if next_i:
             break
-        here_to_find_ratio.append([[returns], [volatility], [sharpe], [weight]])
+        here_to_find_ratio.append([returns, volatility, sharpe, [weight]])
         optimal_search.append([returns,volatility])
         #weight.append(weight)
 here_to_find_ratio = pd.DataFrame(here_to_find_ratio, columns = ['return','volatility','SPI','weights'])
 print(here_to_find_ratio)
 
+
+fig = plt.figure()
 po_annotation = []
 
 for i in range(len(here_to_find_ratio)):
     point_x = here_to_find_ratio.iloc[i,1]
     point_y = here_to_find_ratio.iloc[i,0]
-    point, = plt.plot(point_x,point_y, marker = '.', c = 'darkgreen')
-    annotation = plt.annotate(here_to_find_ratio.iloc[i,3], xy = (point_x,point_y), size = 15)
+    point, = plt.plot(point_x, point_y, c = 'darkgreen' , marker='.')
+    annotation = plt.annotate(here_to_find_ratio.iloc[i,3], xy = (point_x,point_y), size = 10)
     annotation.set_visible(False)
     po_annotation.append([point, annotation])
 
@@ -79,11 +81,18 @@ def on_move(event):
             annotation.set_visible(should_be_visible)
     if visibility_change:
         plt.draw()
-#on_move_id = fig.canvas.mpl
+plt.xlabel('volatiliy')
+plt.ylabel('return')
+plt.title('Efficient Frontier')
+plt.style.use('bmh')
+plt.grid(True)
+on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
 plt.show()
 
 
-'''#print(optimal_search)
+
+
+#print(optimal_search)
 optimal_search = pd.DataFrame(optimal_search)
 #print(optimal_search)
 optimal_search.columns = ['re','vola']
@@ -181,6 +190,6 @@ plt.axvline(b,color='b',label='VaR with parameter')
 plt.axvline(c,color='y',label='Expected Shortfall')
 plt.axvline(d,color='g',label='Historical max. loss')
 plt.legend()
-#plt.show()
-'''
+plt.show()
+
 
