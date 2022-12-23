@@ -4,6 +4,7 @@ import pandas_datareader.data as web
 from datetime import date
 import matplotlib.pyplot as plt
 import scipy.optimize as opt
+import yfinance as yf
 import seaborn as sns
 from RiskMeasure import *
 
@@ -21,7 +22,7 @@ df = pd.DataFrame()
 
 
 for i in tickers:
-    df[i] = web.DataReader(i,'yahoo',start = '2020-1-1',end = date.today())['Adj Close']
+    df[i] = yf.download(i,start = '2020-1-1',end = date.today())['Adj Close']
 data = np.log(df/df.shift(1))
 df_dc = df/df.shift(1)-1
 data.to_csv('Database.csv')
@@ -43,9 +44,9 @@ for stock in range(1000000): #MCS
     next_i = False
     while True:
         weight = np.random.random(number_of_assets)
-        weight = weight / (np.sum(weight))
-        returns = np.dot(weight, returns_annual)
-        volatility = np.sqrt(np.dot(weight.T, np.dot(cov_annual, weight)))  # portfolio volatility in interval
+        weight = np.round(weight / (np.sum(weight)),4)
+        returns = np.round(np.dot(weight, returns_annual),4)
+        volatility = np.round(np.sqrt(np.dot(weight.T, np.dot(cov_annual, weight))),4)  # portfolio volatility in interval
         sharpe = (returns - risk_free_rate) / volatility
 
         for re,vo in optimal_search:
@@ -61,14 +62,14 @@ here_to_find_ratio = pd.DataFrame(here_to_find_ratio, columns = ['return','volat
 print(here_to_find_ratio)
 
 
-fig = plt.figure()
+fig = plt.figure(figsize = (9,7))
 po_annotation = []
 
 for i in range(len(here_to_find_ratio)):
     point_x = here_to_find_ratio.iloc[i,1]
     point_y = here_to_find_ratio.iloc[i,0]
     point, = plt.plot(point_x, point_y, c = 'darkgreen' , marker='.')
-    annotation = plt.annotate(here_to_find_ratio.iloc[i,3], xy = (point_x,point_y), size = 10)
+    annotation = plt.annotate(here_to_find_ratio.iloc[i,3], xy = (point_x,point_y), size = 13)
     annotation.set_visible(False)
     po_annotation.append([point, annotation])
 
@@ -81,14 +82,15 @@ def on_move(event):
             annotation.set_visible(should_be_visible)
     if visibility_change:
         plt.draw()
+
 plt.xlabel('volatiliy')
 plt.ylabel('return')
 plt.title('Efficient Frontier')
 plt.style.use('bmh')
 plt.grid(True)
 on_move_id = fig.canvas.mpl_connect('motion_notify_event', on_move)
+plt.savefig('./efficient_frontier.jpg')
 plt.show()
-
 
 
 
@@ -137,8 +139,6 @@ opts_g = opt.basinhopping(func, x0, niter = 100)
 #print('*'*50,'\n',opts_g)
 
 
-
-
 # Rsik modeling
 opt_weight = opts['x'].round(3)
 port_daily_change = opt_weight*df_dc
@@ -180,10 +180,12 @@ plt.colorbar(label='Sharpe Ratio')
 
 #plot dist
 plt3 = plt.subplot(222)
-plt3 = plt.hist(bootstrapping_data,bins=50, alpha=0.6, color='steelblue')
-plt.ylabel("frequence", fontsize=11)
+plt3 = plt.hist(bootstrapping_data,bins=100, alpha=0.6, color='steelblue')
+plt.ylabel('frequence', fontsize=11)
+plt.xlabel('logreturn',fontsize = 11)
 plt.xticks(fontsize=11)
 plt.yticks(fontsize=11)
+plt.xlim((-0.3,0.3))
 #plt.title("Changes distribution & VaR/ES", fontsize=16)
 plt.axvline(a,color='r',label='VaR with MCS')
 plt.axvline(b,color='b',label='VaR with parameter')
@@ -191,5 +193,3 @@ plt.axvline(c,color='y',label='Expected Shortfall')
 plt.axvline(d,color='g',label='Historical max. loss')
 plt.legend()
 plt.show()
-
-
